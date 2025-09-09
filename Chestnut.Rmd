@@ -1,0 +1,432 @@
+---
+title: "Assignment 1: Case Study Report"
+output: html_document
+date: "2025-06-08"
+---
+
+```{r setup, include=FALSE}
+# Set global chunk options
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Data
+
+| **Variable**         | **Description**                                    |
+|:----------------------|:-----------------------------------------------|
+| `respondent_id`      | An identifier for our observations.                |
+| `variety_of_choice`  | Importance of this attribute on a 1-10 scale.      |
+| `electronics`        | Importance of this attribute on a 1-10 scale.      |
+| `furniture`          | Importance of this attribute on a 1-10 scale.      |
+| `quality_of_service` | Importance of this attribute on a 1-10 scale.      |
+| `low_prices`         | Importance of this attribute on a 1-10 scale.      |
+| `return_policy`      | Importance of this attribute on a 1-10 scale.      |
+| `income`             | Gross annual income expressed in thousands of USD. |
+| `age`                | Respondents’ age in years.                         |
+
+------------------------------------------------------------------------
+
+## Libraries
+
+```{r}
+# Load required libraries
+library(tidyverse)
+library(dplyr)
+library(tibble)
+```
+
+------------------------------------------------------------------------
+
+# 1. Customer Segmentation Analysis
+
+### 1.1: Descriptive Analysis
+
+```{r}
+# Read the dataset
+retailer <- read.csv("retailer.csv")
+
+# View structure and summary
+glimpse(retailer)
+summary(retailer)
+```
+
+```{r}
+# Generate descriptive statistics 
+desc_stats <- data.frame(
+  Variable = names(retailer),
+  Min = apply(retailer, 2, min),
+  Max = apply(retailer, 2, max),
+  Mean = round(apply(retailer, 2, mean), 2),
+  SD = round(apply(retailer, 2, sd), 2)
+)
+desc_stats
+```
+
+An **abnormality** appears: **furniture** has a minimum of **0** even though the scale is 1–10, suggesting a data‐entry error or a special case that merits review before further analysis.
+
+The highest mean is **variety_of_choice** (7.57), indicating a strong average preference for assortment. The lowest mean is **quality_of_service** (3.53), showing comparatively lower concern for service quality among respondents.
+
+Wide SDs in **income** and **age** highlight demographic diversity that may also drive segmentation.
+
+### 1.2: Min/Max in Normalised Dataset
+
+```{r}
+# Excluding respondent_id variables for normalization
+store_attrs <- select(retailer, variety_of_choice, electronics, furniture, 
+                      quality_of_service, low_prices, return_policy, income, age)
+
+# Z-score normalization
+store_norm <- as.data.frame(scale(store_attrs))
+
+# Find each variable’s minimum and maximum z‐score
+norm_mins <- apply(store_norm, 2, min)
+norm_maxs <- apply(store_norm, 2, max)
+
+# Identify variable with smallest min and largest max
+var_smallest_min <- names(which.min(norm_mins))
+var_largest_max  <- names(which.max(norm_maxs))
+var_smallest_min
+var_largest_max
+```
+
+While **electronics** ratings are highly polarized (most extreme low z-score), **age** has the most extreme high z-score, highlighting an outlier in the demographic variable. This informs us that both customer attitudes and demographics will meaningfully separate clusters.
+
+### 1.3: Create and Normalize Clustering Data
+
+```{r}
+# Exclude respondent_id and select only the six store attributes
+store_attrs <- select(retailer, variety_of_choice, electronics, furniture, 
+                      quality_of_service, low_prices, return_policy)
+
+# Normalize and convert to tibble
+store_norm <- as_tibble(scale(store_attrs))
+
+# Display first rows
+store_norm[1:3, ]
+```
+
+The first three respondents’ normalized scores show variation:
+
+-   **Respondent 1**: slightly above average on variety (0.22), but well below average on electronics (−0.75), price (−1.10), and returns (−1.10).
+
+-   **Respondent 2**: strong on price (0.87) and service (0.20), but very low on electronics (−0.75) and returns (−1.59).
+
+-   **Respondent 3**: exhibits an unusual mix—extremely high price sensitivity (z = 1.66) but very low electronics interest (z = −1.38) and essentially average on returning (0.09).
+
+### 1.4: Distance Calculation
+
+```{r}
+# Compute Euclidean distances
+distances <- dist(store_norm, method = "euclidean")
+
+# Show distance matrix (first 5 rows and columns)
+as.matrix(distances)[1:5, 1:5]
+```
+
+-   Respondents **1** and **2** have a distance of **3.12**, reflecting moderate dissimilarity in their profiles.
+
+-   Respondents **3** and **4** are very similar with a distance of **1.62**, indicating closely aligned preferences.
+
+-   Respondent **3** is also moderately similar to respondent **2** (distance **2.80**) but notably divergent from respondent **1** (distance **4.07**), the largest observed here.
+
+These pairwise distances illustrate which customers cluster naturally—small distances group into tight segments, while large distances highlight outliers and drive key splits in the hierarchical tree.
+
+### 1.5: Seed for Reproducibility
+
+```{r}
+# Set seed for reproducibility
+set.seed(123)
+```
+
+By calling **set.seed(123)**, any random processes in later clustering steps will yield the same results each time the code is run. This ensures that cluster assignments remain consistent for grading and downstream analysis.
+
+### 1.6: Hierarchical Clustering (Ward.D2)
+
+```{r}
+# Run hierarchical clustering
+hier_clust <- hclust(distances, method = "ward.D2")
+
+# View summary
+hier_clust
+```
+
+This step creates a dendrogram structure grouping the 200 respondents (rows) based on their six normalized store-attribute ratings. This clustering structure will help us identify distinct customer segments based on those six attributes, pinpointing the heights at which natural groupings occur, guiding our choice of 3 or 4 clusters for segmentation.
+
+### 1.7: Dendrogram Plot
+
+```{r}
+# Plot dendrogram
+plot(hier_clust)
+```
+
+The dendrogram visually displays how individuals merge into clusters at increasing levels of within-cluster variance
+
+-   At **height ≈60**, three large clusters remain, indicating a natural **3‑cluster** cut where each merge beyond this would combine distinctly different segments.
+
+-   A secondary, smaller jump occurs around **height ≈40–45**, where one of the three clusters splits into two more cohesive subgroups.
+
+-   The relatively small vertical distances between merges below height 20 suggest those clusters share similar preference patterns; large jumps above 20–30 indicate meaningful distinctions.
+
+### 1.8: 3-Cluster Solution (Hierarchical)
+
+```{r}
+# Plot and cut dendrogram
+plot(hier_clust)
+rect.hclust(hier_clust, k = 3, border = "red")
+
+# Assign 3 clusters
+hc3 <- cutree(hier_clust, k = 3)
+```
+
+The three red rectangles show how the 200 respondents split into **3 distinct clusters** at a cut height of approximately **60** on the dendrogram’s vertical axis.
+
+-   **Cluster 1** (94 members) merges at relatively low heights within itself, indicating homogenous preferences.
+
+-   **Cluster 2** (60 members) also shows tight within-cluster merges below height \~20.
+
+-   **Cluster 3** (46 members) contains two sub-branches that merge around height \~45, but remain separate from Cluster 2 until the \~60 cut.
+
+### 1.9: Cluster Sizes (3-Cluster)
+
+```{r}
+# Cluster sizes for 3-cluster solution
+table(hc3)
+```
+
+-   **Cluster 1 (94 respondents)**: represents the dominant group, likely reflecting customers with moderate attitudes across multiple attributes.
+
+-   **Cluster 2 (60 respondents)**: a mid‐sized group that may emphasize one or two key attributes strongly.
+
+-   **Cluster 3 (46 respondents)**: the smallest group, potentially a niche with extreme preferences.
+
+This 3‐cluster segmentation balances parsimony and interpretability, forming broadly actionable segments.
+
+### 1.10: K-Means (3-Cluster)
+
+```{r}
+# Run k-means clustering
+set.seed(123)
+kmeans_clust3 <- kmeans(store_norm, centers = 3, iter.max = 1000, nstart = 100)
+
+# View results
+kmeans_clust3
+table(kmeans_clust3$cluster)
+```
+
+K-means yields the same size counts as hierarchical but labels clusters differently (Cluster 1 in k-means corresponds to hierarchical’s Cluster 3, etc.)
+
+The centroids confirm:
+
+-   **Cluster 1** strongly values low_prices & return_policy
+
+-   **Cluster 2** values quality_of_service
+
+-   **Cluster 3** values variety & variety_of_choice
+
+K-means optimizes within-cluster variance directly, providing complementary insight to the agglomerative approach.
+
+### 1.11: 4-Cluster Solution (Hierarchical)
+
+```{r}
+# Plot and cut dendrogram for 4 clusters
+plot(hier_clust)
+rect.hclust(hier_clust, k = 4, border = "blue")
+
+# Assign 4 clusters
+hc4 <- cutree(hier_clust, k = 4)
+table(hc4)
+```
+
+Cutting at **height ≈ 45** (blue rectangles) splits the sample into **4 clusters**: two large groups (Clusters 1 & 2) and two smaller sub-segments (Clusters 3 & 4).
+
+-   **Clusters 1 & 2** each merge at low heights within themselves, indicating cohesive segments.
+
+-   **Cluster 3** (17 members) captures perhaps an extreme service-only or price-only preference.
+
+-   **Cluster 4** (29 members) splits from the far right branch at a slightly lower height, identifying a secondary segment worth separate targeting.
+
+### 1.12: K-Means (4-Cluster)
+
+```{r}
+# Run k-means with 4 clusters
+set.seed(123)
+kmeans_clust4 <- kmeans(store_norm, centers = 4, iter.max = 1000, nstart = 100)
+
+# View results
+kmeans_clust4
+table(kmeans_clust4$cluster)
+```
+
+The four clusters have sizes **17, 60, 29**, and **94**, showing a small niche, two mid‐sized groups, and one large segment.
+
+-   **Cluster 1** (17) is characterized by strong positive electronics (1.04) and return_policy (1.26) scores—an elite “**Tech & Returns**” niche.
+
+-   **Cluster 2** (60) aligns with high low_prices (1.33) and return_policy (0.72)—the “**Price‐Sensitive.**”
+
+-   **Cluster 3** (29) peaks on quality_of_service (2.05)—the small “**Service Lovers**.
+
+-   **Cluster 4** (94) shows the highest variety_of_choice (0.81) and furniture (0.90)—the broad “**Assortment Seekers**.”
+
+### 1.13: Choosing Between 3 vs 4 Clusters (NbClust)
+
+```{r}
+# Load package
+library(NbClust)
+
+# Run NbClust to evaluate cluster numbers
+set.seed(123)
+nb_result <- NbClust(data = store_norm[, 1:6], 
+                     min.nc = 3, 
+                     max.nc = 15, 
+                     index = "all", 
+                     method = "ward.D2")
+
+# View best number of clusters
+nb_result$Best.nc
+```
+
+The overall majority rule and the package’s conclusion selects **4 clusters,** highlighting the importance of capturing a small but distinctive niche segment.
+
+The fourth segment (17 respondents) exhibits unique preferences—particularly ultra‑high service or niche technology returns behavior—that would be overlooked in a 3‑cluster model. Opting for 4 clusters balances depth of customer insight with actionable segmentation: three large segments cover the core market, and the fourth can inform targeted premium offerings or specialized promotions without unduly complicating marketing execution.
+
+------------------------------------------------------------------------
+
+# 2. Segment Profiling
+
+### 2.14: Segment Profiles (Normalized Means)
+
+```{r}
+# Load package and convert to kcca object
+library(flexclust)
+hier_clust_flex <- as.kcca(hier_clust, store_norm, k = 4)
+# Display normalized cluster centers
+round(hier_clust_flex@centers, 2)
+```
+
+```{r}
+# Compare clusters
+table(hc4, clusters(hier_clust_flex))
+```
+
+```{r}
+# Plot segment profiles
+barchart(hier_clust_flex, main = "Segment Profiles")
+```
+
+The bar chart reflects the same ordering as **hc4** clusters:
+
+-   **Cluster 1:** High variety and furniture (**Assortment Seekers**).
+
+-   **Cluster 2:** High low_prices and moderate returns (**Price-Sensitive**).
+
+-   **Cluster 3:** Very high quality_of_service (**Service Lovers**).
+
+-   **Cluster 4:** High electronics and return_policy (**Tech & Returns).**
+
+### 2.15: Segment Naming (Unstandardized Means)
+
+```{r}
+# Add the cluster assignment to the un-normalized data set
+retailer <- retailer %>% 
+  mutate(cluster4 = hc4)
+
+# Compute the average values of the un-normalized dataset 
+retailer %>%
+  group_by(cluster4) %>%
+  summarise(
+    # Store attributes (raw 1–10 ratings)
+    Mean_Variety   = round(mean(variety_of_choice),   2),
+    Mean_Electronics = round(mean(electronics),      2),
+    Mean_Furniture   = round(mean(furniture),        2),
+    Mean_Service     = round(mean(quality_of_service),2),
+    Mean_Price       = round(mean(low_prices),       2),
+    Mean_Returns     = round(mean(return_policy),    2),
+    # Demographics
+    Mean_Income      = round(mean(income),           2),
+    Mean_Age         = round(mean(age),              2),
+    # Cluster size & proportion
+    N                = n(),
+    Prop             = round(n()/nrow(retailer), 2)
+  ) -> raw_profiles
+
+raw_profiles
+```
+
+1.  **Cluster 1 (94 respondents; 47 %) – “Assortment Enthusiasts”**
+
+Assortment Seekers captures their overriding desire for breadth of selection, which Chestnut Ridge can satisfy with its deep SKU range
+
+**Bases:**
+
+-   **Variety_of_choice 9.19/10** (highest of all segments) and **furniture 5.40/10**: these shoppers prize an extensive product assortment above all.
+
+-   Moderate scores on electronics (5.30), price (3.84), service (2.33) and returns (3.03) indicate they’re not extreme bargain hunters or service fanatics as they simply want choice.
+
+**Descriptors:**
+
+-   **Mean income \$31.15 k**, **Mean age 31.7 yrs**: a broad, middle‐income, young-adult cohort.
+
+-   Represents the retailer’s core traffic: fairly balanced demographics and broad interests.
+
+\
+
+2.  **Cluster 2 (60 respondents; 30 %) – “Bargain Hunters”**
+
+Bargain Hunters reflects their strong price orientation and willingness to return items if not satisfied.
+
+**Bases:**
+
+-   **Low_prices 8.15/10** (very high) and **return_policy 5.73/10**: this group is driven by bargains and expects easy returns.
+
+-   Low ratings on electronics (2.90) and furniture (1.20) show they deprioritise product breadth or premium categories.
+
+**Descriptors:**
+
+-   **Mean income \$19.05 k**, **Mean age 25.5 yrs**: younger, lower-income shoppers likely constrained by budget.
+
+-   Large size but low average spend, typical of deal-driven foot traffic.
+
+\
+
+3.  **Cluster 3 (17 respondents; 9 %) – “Tech & Returns Loyalists”**
+
+Tech & Returns Loyalists emphasize their twin priorities: cutting-edge devices plus peace-of-mind returns.
+
+**Bases:**
+
+-   **Electronics 6.47/10** and **return_policy 6.82/10** (both highest except extremes): these are tech-savvy shoppers who count on a generous returns policy.
+
+-   Lower variety (4.94) and price sensitivity (2.76) indicate focus on electronics over décor or discounts
+
+**Descriptors:**
+
+-   **Mean income \$45.59 k**, **Mean age 38.6 yrs**: mid-career professionals with disposable income to spend on gadgets.
+
+-   Small but high-value segment, likely to purchase premium electronics.
+
+4.  **Cluster 4 (29 respondents; 14 %) – “Premium Service Seekers”**
+
+Premium Service Seekers captures their willingness to trade up on service quality rather than chasing discounts.
+
+**Bases:**
+
+-   **Quality_of_service 8.28/10** (by far the highest): this group demands white-glove service above price or product range.
+
+-   Moderate scores on electronics (3.72) and variety (5.17) suggest service is their defining criterion.
+
+**Descriptors:**
+
+-   **Mean income \$54.76 k**, **Mean age 46.2 yrs:** older, affluent customers who can pay extra for installation, warranties, and in-home support.
+
+-   A niche with strong lifetime-value potential through service add-ons.
+
+These segments each convey the cluster’s dominant attitudinal base and, with the demographic descriptors, give Chestnut Ridge clear, actionable personas for targeted marketing, merchandising, and service strategies.
+
+------------------------------------------------------------------------
+
+# 3. **Target Segment Selection**
+
+(See Microsoft word file)
+
+### 
+
+# End of Code
