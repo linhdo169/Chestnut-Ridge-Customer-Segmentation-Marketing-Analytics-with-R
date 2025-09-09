@@ -61,5 +61,18 @@ As a marketing analyst, the goal was to:
 - How to bridge **quantitative analysis** with **business strategy**.  
 
 ---
+## Files
 
+- **Chestnut.Rmd:**
+An R Markdown file containing the full analysis, code, outputs, and commentary. Knit this file to view the complete report.
+
+- **Case Study Chestnut.docx:**  
+Business-focused case study summary, including:
+    - Target segment evaluation and selection (GE Matrix results)
+    - Key insights from the cluster analysis
+    - Strategic recommendations for Chestnut Ridge’s marketing approach  
+  This document is ideal for stakeholders seeking actionable insights and business implications.
+
+- **retailer.csv:**  
+  The original dataset with 200 customer responses, including demographic and survey information. Used for all analysis and modeling in this project.
 
