@@ -23,6 +23,23 @@ As a marketing analyst, the goal was to:
   - GE Matrix for target segment evaluation  
 
 ---
+## Files
+
+- **Chestnut.Rmd:**
+An R Markdown file containing the full analysis, code, outputs, and commentary. Knit this file to view the complete report.
+
+- **Case Study Chestnut.docx:**  
+Business-focused case study summary, including:
+    - Target segment evaluation and selection (GE Matrix results)
+    - Key insights from the cluster analysis
+    - Strategic recommendations for Chestnut Ridge’s marketing approach  
+This document is ideal for stakeholders seeking actionable insights and business implications.
+
+- **retailer.csv:**  
+  The original dataset with 200 customer responses, including demographic and survey information. Used for all analysis and modeling in this project.
+
+
+---
 
 ##  Process
 1. **Data Preparation**  
@@ -47,11 +64,13 @@ As a marketing analyst, the goal was to:
 
 ---
 
-## Outcomes
-- Identified clear customer segments with unique needs and priorities.  
+## Key Insights & Recommendations
+- Identified clear customer segments with unique needs and priorities: Assortment Seekers and Service Lovers are identified as the most attractive segments for Chestnut Ridge. 
 - Provided **data-driven marketing strategies** tailored to each group.  
-- Showcased how **cluster analysis** supports managerial decision-making.  
+- Showcased how **cluster analysis** supports managerial decision-making.
+- Data-driven segmentation allows Chestnut Ridge to move beyond a one-size-fits-all approach, enhancing customer engagement.
 
+For the full segment evaluation and strategic recommendations, see [Case Study Chestnut.docx).
 ---
 
 ## What I Learned
@@ -59,20 +78,4 @@ As a marketing analyst, the goal was to:
 - The importance of **data standardization** for distance-based clustering.  
 - How to **interpret and profile clusters** for actionable marketing insights.  
 - How to bridge **quantitative analysis** with **business strategy**.  
-
----
-## Files
-
-- **Chestnut.Rmd:**
-An R Markdown file containing the full analysis, code, outputs, and commentary. Knit this file to view the complete report.
-
-- **Case Study Chestnut.docx:**  
-Business-focused case study summary, including:
-    - Target segment evaluation and selection (GE Matrix results)
-    - Key insights from the cluster analysis
-    - Strategic recommendations for Chestnut Ridge’s marketing approach  
-  This document is ideal for stakeholders seeking actionable insights and business implications.
-
-- **retailer.csv:**  
-  The original dataset with 200 customer responses, including demographic and survey information. Used for all analysis and modeling in this project.
 
