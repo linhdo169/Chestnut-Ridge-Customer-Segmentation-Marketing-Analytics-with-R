@@ -70,7 +70,7 @@ This document is ideal for stakeholders seeking actionable insights and business
 - Showcased how **cluster analysis** supports managerial decision-making.
 - Data-driven segmentation allows Chestnut Ridge to move beyond a one-size-fits-all approach, enhancing customer engagement.
 
-For the full segment evaluation and strategic recommendations, see [Case Study Chestnut.docx).
+  For the full segment evaluation and strategic recommendations, see [Case Study Chestnut.docx).
 ---
 
 ## What I Learned
